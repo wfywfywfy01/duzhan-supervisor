@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: 后端测试
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: 单元测试
+        env:
+          PYTHONPATH: .
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+      - name: 语法检查
+        run: python -m compileall -q app tests
+
+  frontend:
+    name: 前端测试与构建
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: 安装依赖
+        run: npm install --no-audit --no-fund
+      - name: 单元测试
+        run: npm test
+      - name: 类型检查
+        run: npm run typecheck
+      - name: 构建
+        run: npm run build

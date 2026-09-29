@@ -1,0 +1,54 @@
+{
+  "blocks": [
+    {
+      "type": "group",
+      "channel_id": "11111111-1111-4111-8111-111111111111",
+      "label": "示例达标群 A"
+    },
+    {
+      "type": "times",
+      "slots": [
+        "10:00",
+        "15:00",
+        "20:00"
+      ]
+    },
+    {
+      "type": "people",
+      "names": [
+        "示例成员A",
+        "示例成员B",
+        "示例成员C"
+      ]
+    },
+    {
+      "type": "source",
+      "key": "msg_summary"
+    },
+    {
+      "type": "source",
+      "key": "quote_ocr"
+    },
+    {
+      "type": "source",
+      "key": "daily_report"
+    },
+    {
+      "type": "rule",
+      "mode": "text",
+      "text": "本档动作：核验交付物与证据，未交的今天内补齐。",
+      "when": "always"
+    },
+    {
+      "type": "condition",
+      "key": "workday",
+      "value": true
+    },
+    {
+      "type": "style",
+      "lang": "zh",
+      "title": "每日三追进度表",
+      "footer": "示例落款：督战官自动播报"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "blocks": [
+    {
+      "type": "group",
+      "channel_id": "33333333-3333-4333-8333-333333333333",
+      "label": "示例跟进群 1"
+    },
+    {
+      "type": "times",
+      "slots": [
+        "20:00"
+      ]
+    },
+    {
+      "type": "people",
+      "names": [
+        "示例跟进人1"
+      ]
+    },
+    {
+      "type": "source",
+      "key": "daily_report"
+    },
+    {
+      "type": "source",
+      "key": "meeting_notes"
+    },
+    {
+      "type": "rule",
+      "mode": "text",
+      "text": "上表是今日日报提交情况，未提交的以日报为准补交。",
+      "when": "always"
+    },
+    {
+      "type": "rule",
+      "mode": "ai",
+      "prompt": "根据当天数据，为未交日报的成员各写一句不超过 40 字的催促，只讲事实、不评价人。",
+      "when": "missing_report"
+    },
+    {
+      "type": "strategy",
+      "id": "promo_a",
+      "until": "2099-12-31"
+    },
+    {
+      "type": "recipient",
+      "kind": "user",
+      "id": "55555555-5555-4555-8555-555555555555"
+    },
+    {
+      "type": "condition",
+      "key": "workday",
+      "value": true
+    },
+    {
+      "type": "style",
+      "lang": "zh",
+      "title": "未交日报专项督战",
+      "footer": "示例落款：督战官自动播报"
+    }
+  ]
+}

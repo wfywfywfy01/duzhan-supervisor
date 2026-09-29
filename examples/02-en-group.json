@@ -1,0 +1,41 @@
+{
+  "blocks": [
+    {
+      "type": "group",
+      "channel_id": "22222222-2222-4222-8222-222222222222",
+      "label": "示例达标群 B"
+    },
+    {
+      "type": "times",
+      "slots": [
+        "15:00",
+        "20:00"
+      ]
+    },
+    {
+      "type": "people",
+      "names": [
+        "示例成员D",
+        "示例成员E"
+      ]
+    },
+    {
+      "type": "source",
+      "key": "msg_summary"
+    },
+    {
+      "type": "source",
+      "key": "im_trace"
+    },
+    {
+      "type": "condition",
+      "key": "has_data",
+      "value": true
+    },
+    {
+      "type": "style",
+      "lang": "en",
+      "title": "Daily Progress Brief"
+    }
+  ]
+}
