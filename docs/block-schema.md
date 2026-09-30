@@ -1,6 +1,6 @@
 # 积木字段与校验规则（block-schema）
 
-> 本文**逐条对照** `backend/app/duzhan_blocks.py` 写成：每个字段、每条报错文案都取自该文件（含 `_check_one()`、`validate_blocks()` 与 `block_schema()`）；凡是代码里没写的约束，本文也不写。字段名大小写与 JSON 键名完全一致。
+> 本文**逐条对照** `pdca-workbench/app/duzhan_blocks.py` 写成：每个字段、每条报错文案都取自该文件（含 `_check_one()`、`validate_blocks()` 与 `block_schema()`）；凡是代码里没写的约束，本文也不写。字段名大小写与 JSON 键名完全一致。
 
 ## 0. 总则
 
@@ -47,7 +47,7 @@
 补充（代码事实）：
 
 - `label` 决定了 `people` 用哪份名单：`service.owners_for()` 拿 `label` 去 `roster_by_group()` 里查该群成员；**查不到就用全量名单** `roster_names()`。
-- `label` **不**参与渲染器选择：`service.renderer_for()` 只看 `channel_id` 是否落在跟进群集合里（`group_brief.renderer` / `follow_brief.renderer`）。
+- `label` **不**参与渲染器选择：`service.renderer_for()` 只看 `channel_id` 是否落在跟进群集合里（`duzhan.render_brief` / `ctob.render_brief`）。
 - UUID 正则大小写不敏感，`A-F` 小写也可以。
 
 ## 2. `times`：推送档位
@@ -318,11 +318,11 @@
 
 ## 14. 改积木类型时要动哪些地方
 
-顺序固定（改完跑 `backend/tests`）：
+顺序固定（改完跑 `pdca-workbench/tests`）：
 
 1. `duzhan_blocks.py`：`BLOCK_TYPES`（或对应枚举）→ `_check_one()` 加分支 → `block_schema()` 加面板定义；
 2. `app/duzhan_admin/service.py`：`resolve_spec()` 里把新块翻译进运行时结构（需要的话同时改 `_summary_lines()`，让试跑能看到它）；
-3. `backend/tests/test_duzhan_blocks.py`：补正例 + 至少一条反例（断言报错文案）；
+3. `pdca-workbench/tests/test_duzhan_blocks.py`：补正例 + 至少一条反例（断言报错文案）；
 4. `frontend/src/api/duzhanBlocks.ts`：只有需要新的控件类型时才动 `kind`；
 5. 本文档（`docs/block-schema.md`）与 `examples/`。
 
@@ -332,7 +332,7 @@
 
 ```python
 import sys
-sys.path.insert(0, "backend")
+sys.path.insert(0, "pdca-workbench")
 from app.duzhan_blocks import (BLOCK_TYPES, CONDITION_KEYS, LANGS, RECIPIENT_KINDS,
                                RULE_MODES, RULE_WHEN, SLOT_HOURS, SOURCE_KEYS,
                                block_schema, parse_blocks, validate_blocks)

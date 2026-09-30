@@ -1,0 +1,104 @@
+{
+  "title": "策略核查（脱敏示例）",
+  "noise": [
+    "维修",
+    "repair",
+    "\\bafter[- ]?sales\\b"
+  ],
+  "strategies": [
+    {
+      "id": "sample-watch-x1",
+      "label": "示例：Sample Watch X1 全球首发配额",
+      "until": "2026-12-31",
+      "strong": [
+        "allocation\\s*price|配额价|首发价",
+        "(?:worldwide|globally|全球)[^。\\n]{0,20}(?:50|fifty)\\s*(?:sets?|pcs|units|套)",
+        "(?:deposit|定金)[^。\\n]{0,20}(?:lock|reserve|confirm|锁|预留|确认)"
+      ],
+      "weak": [
+        "sample\\s*watch\\s*x1|示例腕表\\s*x1",
+        "first\\s*release|首发",
+        "quota|配额"
+      ]
+    },
+    {
+      "id": "sample-bespoke-rebate",
+      "label": "示例：定制单 +5% 返点",
+      "skip_if_noise": true,
+      "strong": [
+        "\\+?\\s*5\\s*%\\s*rebate|5\\s*个点返点|\\+\\s*5\\s*%",
+        "bespoke\\s*(?:sample\\s*)?order|定制单",
+        "72\\s*hours|72\\s*小时"
+      ],
+      "weak": [
+        "bespoke|rebate|返点"
+      ],
+      "themes": [
+        {
+          "id": "quota",
+          "label": "讲清配额",
+          "patterns": [
+            "quota|配额"
+          ]
+        },
+        {
+          "id": "deadline",
+          "label": "讲清截止",
+          "patterns": [
+            "deadline|cut[- ]?off|截止"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "demo-ring-s2",
+      "label": "示例：Demo Ring S2 折扣与赠品",
+      "until": "2026-11-30",
+      "strong": [
+        "demo\\s*ring\\s*s2[^\\n。]{0,40}(?:5\\s*折|50\\s*%|half\\s*price|retail\\s*price)",
+        "(?:提|买|buy)\\s*30\\s*(?:台|units?|pcs)?[^\\n。]{0,20}(?:赠|get)\\s*3\\s*(?:台|units?|free)",
+        "(?:advance\\s*purchase|认购权|pre[- ]?order)[^\\n。]{0,40}gen\\s*3|gen\\s*3[^\\n。]{0,40}(?:advance\\s*purchase|认购权)"
+      ],
+      "weak": [
+        "demo\\s*ring|示例戒指|smart\\s*ring"
+      ],
+      "themes": [
+        {
+          "id": "price",
+          "label": "讲清价格",
+          "patterns": [
+            "retail\\s*price|\\d+\\s*%\\s*off|折扣|几折"
+          ]
+        },
+        {
+          "id": "gift",
+          "label": "讲清赠品",
+          "patterns": [
+            "get\\s*\\d+\\s*free|赠\\s*\\d+|gift"
+          ]
+        },
+        {
+          "id": "gen3",
+          "label": "讲清第三代",
+          "patterns": [
+            "gen\\s*3|third[- ]generation|第三代"
+          ]
+        },
+        {
+          "id": "deadline",
+          "label": "讲清截止",
+          "patterns": [
+            "order\\s*by|deadline|cut[- ]?off|截止|september\\s*25"
+          ]
+        },
+        {
+          "id": "stable",
+          "label": "讲清价格不变",
+          "patterns": [
+            "remain\\s*unchanged|unchanged|不变|价格稳定"
+          ]
+        }
+      ]
+    }
+  ]
+}

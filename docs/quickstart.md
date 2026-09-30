@@ -8,41 +8,41 @@
 | --- | --- | --- |
 | Python | 3.12+ | 代码用到标准库 `zoneinfo`；CI 用 3.12 |
 | Node | 20+（CI 用 22） | 前端用 Vite 7 + Vue 3.5 |
-| 端口 | 8000（后端）、5173（前端） | 都能改，见第 6 节 |
+| 端口 | 8767（后端，默认）、5173（前端） | 都能改，见第 6 节 |
 | 终端 | PowerShell 7 / bash / zsh 均可 | 下面命令按仓库根目录为起点写 |
 
 ## 1. 起后端（约 1 分钟）
 
 ```powershell
-cd backend
+cd pdca-workbench
 python -m pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+python run.py
 ```
 
-看到 `Application startup complete.` 就成了（启动时会自动建表）。**必须在 `backend/` 目录下起**，因为应用路径是相对的 `app.main:app`。
+看到 `Application startup complete.` 就成了（启动时会自动建表）。**必须在 `pdca-workbench/` 目录下起**，因为应用路径是相对的 `app.main:app`（一行写法：`cd pdca-workbench && python run.py`）。
 
 另开一个终端冒烟：
 
 ```powershell
-curl.exe http://127.0.0.1:8000/health
-# {"ok":true}
+curl.exe http://127.0.0.1:8767/healthz
+# {"status":"ok","duzhan_enabled":false,"ctob_enabled":false,"heiwu_enabled":false}
 ```
 
-数据库默认落在 `backend/duzhan.db`（SQLite）。想换一份干净的库：
+数据库由 `PDCA_DATABASE_URL` 决定（`app/config.py` 启动时读 `pdca-workbench/.env`）。想换一份干净的库：
 
 ```powershell
-$env:DUZHAN_DB = "$env:TEMP\duzhan-demo.db"    # bash: export DUZHAN_DB=/tmp/duzhan-demo.db
+$env:PDCA_DATABASE_URL = "sqlite:///./data/duzhan-demo.db"   # bash: export PDCA_DATABASE_URL=sqlite:///./data/duzhan-demo.db
 ```
 
 ## 2. 起前端（约 1 分钟）
 
 ```powershell
-cd frontend
+cd frontend          # 另开一个终端，从仓库根目录进（不是 pdca-workbench/）
 npm install
 npm run dev
 ```
 
-打开 `http://127.0.0.1:5173`。前端用相对路径请求 `/api/…`，由 Vite 代理到 `http://127.0.0.1:8000`（`vite.config.ts` 的 `server.proxy`），所以**不需要配 baseURL，也不会有跨域问题**。
+打开 `http://127.0.0.1:5173`。前端用相对路径请求 `/api/…`，由 Vite 代理到 `http://127.0.0.1:8767`（`vite.config.ts` 的 `server.proxy`），所以**不需要配 baseURL，也不会有跨域问题**。
 
 ## 3. 界面 60 秒上手
 
@@ -52,7 +52,7 @@ npm run dev
 4. 故意写坏一条：把 `slots` 里的时刻改成 `12:00` → 保存 → 顶部提示「已存草稿，但配置还有 1 处问题，暂时不能启用」，列表出现「1 处问题」标签，**启用按钮变灰**；
 5. 改回 `10:00` 保存 → 启用按钮可用 → 点「启用」→ 提示「已启用，调度会按这份配置注册」。
 
-> 说明：这个仓库没有调度器，所以"启用"只是把 `enabled` 置为真、让下游可以按库注册；本仓库不会真的发消息。
+> 说明：「启用」只是把 `enabled` 置为真；**只有** `PDCA_DUZHAN_CONFIG_SOURCE=db` 时，调度器才会按启用的子 Agent 注册采集与推送（默认 `code` 源不会因为点启用就多跑任务）。真实发消息的出口是 `VERTU_COMMAND` 指向的 IM CLI，脱敏版没有可用凭据，所以本地跑不会真发群消息。
 
 ## 4. 用 curl 走一遍（不开界面也能验）
 
@@ -65,7 +65,7 @@ $payload = @{ name = '示例达标群 A 日报'; timezone = 'Asia/Shanghai'; not
 Set-Content -Path .\payload.json -Value $payload -Encoding utf8NoBOM   # PS 5.1 请改用 Invoke-RestMethod（见文末）
 
 # ② 创建：默认停用，返回体带 id / enabled=false / errors=[]
-curl.exe -s -X POST http://127.0.0.1:8000/api/duzhan-agents ^
+curl.exe -s -X POST http://127.0.0.1:8767/api/duzhan-agents ^
   -H "Content-Type: application/json" --data-binary "@payload.json"
 ```
 
@@ -79,7 +79,7 @@ curl.exe -s -X POST http://127.0.0.1:8000/api/duzhan-agents ^
   "timezone": "Asia/Shanghai",
   "blocks": { "blocks": [ { "type": "group", "channel_id": "11111111-1111-4111-8111-111111111111", "label": "示例达标群 A" }, … ] },
   "errors": [],
-  "renderer": "group_brief.renderer",
+  "renderer": "duzhan.render_brief",
   "updated_at": "2026-09-29T09:20:00+00:00"
 }
 ```
@@ -87,13 +87,13 @@ curl.exe -s -X POST http://127.0.0.1:8000/api/duzhan-agents ^
 ```powershell
 # ③ 启用（id 用上一步返回的）
 '{"enabled": true}' | Set-Content -Path .\toggle.json -Encoding utf8NoBOM
-curl.exe -s -X POST http://127.0.0.1:8000/api/duzhan-agents/1/toggle ^
+curl.exe -s -X POST http://127.0.0.1:8767/api/duzhan-agents/1/toggle ^
   -H "Content-Type: application/json" --data-binary "@toggle.json"
 # {"id":1,…,"enabled":true,…}
 
 # ④ 结构试跑（不取数、不发消息；day/hour 都可省）
 '{"day": "2026-09-29", "hour": 20}' | Set-Content -Path .\preview.json -Encoding utf8NoBOM
-curl.exe -s -X POST http://127.0.0.1:8000/api/duzhan-agents/1/preview ^
+curl.exe -s -X POST http://127.0.0.1:8767/api/duzhan-agents/1/preview ^
   -H "Content-Type: application/json" --data-binary "@preview.json"
 ```
 
@@ -107,12 +107,12 @@ curl.exe -s -X POST http://127.0.0.1:8000/api/duzhan-agents/1/preview ^
 数据源：消息汇总（触达 / 回复 / 新增） → 报价图 OCR 识别 → 日报提交情况
 规则（always）：本档动作：核验交付物与证据，未交的今天内补齐。
 触发条件：仅工作日 = 是
-渲染器：group_brief.renderer
+渲染器：duzhan.render_brief
 ```
 
 ```powershell
 # ⑤ 列表：每条都带 errors 与 renderer
-curl.exe -s http://127.0.0.1:8000/api/duzhan-agents
+curl.exe -s http://127.0.0.1:8767/api/duzhan-agents
 
 # ⑥ 反例：坏配置能存草稿，但启用会被 400 挡下
 $bad = @{ name = '反例'; blocks = @{ blocks = @(
@@ -120,11 +120,11 @@ $bad = @{ name = '反例'; blocks = @{ blocks = @(
   @{ type = 'times'; slots = @('12:00') }
 ) } } | ConvertTo-Json -Depth 12
 Set-Content -Path .\bad.json -Value $bad -Encoding utf8NoBOM
-curl.exe -s -X POST http://127.0.0.1:8000/api/duzhan-agents -H "Content-Type: application/json" --data-binary "@bad.json"
+curl.exe -s -X POST http://127.0.0.1:8767/api/duzhan-agents -H "Content-Type: application/json" --data-binary "@bad.json"
 # 200 + errors: ["第 1 块 group：channel_id 必须是群 UUID，当前为 not-a-uuid", "第 2 块 times：当前引擎只支持 10:00/15:00/20:00，不支持 12:00"]
 
 '{"enabled": true}' | Set-Content -Path .\toggle.json -Encoding utf8NoBOM
-curl.exe -s -X POST http://127.0.0.1:8000/api/duzhan-agents/2/toggle -H "Content-Type: application/json" --data-binary "@toggle.json"
+curl.exe -s -X POST http://127.0.0.1:8767/api/duzhan-agents/2/toggle -H "Content-Type: application/json" --data-binary "@toggle.json"
 # 400 {"detail": {"message": "配置有误，不能启用", "errors": [ … ]}}
 ```
 
@@ -132,13 +132,14 @@ curl.exe -s -X POST http://127.0.0.1:8000/api/duzhan-agents/2/toggle -H "Content
 >
 > ```powershell
 > $payload = @{ name='示例达标群 A 日报'; timezone='Asia/Shanghai'; blocks=(Get-Content -Raw -Encoding utf8 .\examples\01-zh-daily-brief.json | ConvertFrom-Json).blocks } | ConvertTo-Json -Depth 12
-> Invoke-RestMethod -Uri http://127.0.0.1:8000/api/duzhan-agents -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($payload))
+> Invoke-RestMethod -Uri http://127.0.0.1:8767/api/duzhan-agents -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($payload))
+> ```
+
 ## 5. 跑测试
 
 ```powershell
-# 后端：39 条单测（积木解析/校验 + API CRUD/闸门/试跑/导入 + 模型）
-cd backend
-$env:PYTHONPATH='.'                                  # bash: export PYTHONPATH=.
+# 督战官：14 个测试文件（积木解析/校验 + API CRUD/闸门/试跑/导入 + 调度与台账）
+cd pdca-workbench
 python -m unittest discover -s tests -p "test_*.py" -v
 
 # 前端：7 条积木纯函数单测 + 类型检查 + 构建
@@ -155,7 +156,7 @@ npm run build
 换端口即可，两边要对应：
 
 ```powershell
-uvicorn app.main:app --reload --port 8010
+# .env 里改 PDCA_WORKBENCH_PORT=8010 后重启（临时：$env:PDCA_WORKBENCH_PORT=8010; python run.py）
 # 前端：改 vite.config.ts 的 server.port 与 proxy['/api'].target，或临时
 # npm run dev -- --port 5174
 ```
@@ -163,7 +164,7 @@ uvicorn app.main:app --reload --port 8010
 **Q2. 页面打得开但列表一直报错 / 404（跨域、CORS）**
 前端请求的是相对路径 `/api/…`，只有两种情况会出问题：
 1) 没走 Vite 而是直接开 `dist/index.html`（`file://`）——没有代理，必然失败；请用 `npm run dev`，或把 `dist` 交给后端同源托管。
-2) 改了前端端口（比如 5174），但后端 CORS 白名单只有 `http://127.0.0.1:5173` 与 `http://localhost:5173`（`app/main.py`）。往 `allow_origins` 里加上你的地址即可。注意 `allow_credentials=True` 时**不能用** `*`。
+2) 绕过 Vite 代理、从别的源直连后端：开源版入口 `app/main.py` 只挂了写请求来源校验（`app/auth/csrf.py`），没挂 CORS 中间件——`.env` 里的 `PDCA_CORS_ORIGINS` 要你自己在 `app/main.py` 里加进 `CORSMiddleware` 才生效（注意 `allow_credentials=True` 时**不能用** `*`）。
 
 **Q3. 试跑为什么没有真实数据、也不发消息？**
 结构试跑（`POST /{id}/preview`）按设计**只做两件事**：把配置翻译成运行时结构（`resolve_spec()`）、跑一遍校验；返回的 `summary` 是"到点会怎么发"的说明，不是报告正文。返回体里 `note` 明写：`结构试跑：只解析配置与校验，不取数、不发消息。` 想看到真实报告，得由运行时（不在本仓库）按这份结构去取数、渲染、推送。
@@ -172,10 +173,10 @@ uvicorn app.main:app --reload --port 8010
 说明配置有错误：看列表项上的「N 处问题」或响应里的 `errors[]` / `detail.errors[]`，逐条对照 `docs/block-schema.md` 第 12 节的排错速查。
 
 **Q5. 报「不在督战名单内 XXX」**
-`people.names` 必须与名单里的名字完全一致（`app/adapters/roster.py` 的 `display`）。另外名字是按 **群** 取的：先拿 `group.label` 去 `roster_by_group()` 找该群成员，找不到才退回全量名单 `roster_names()`。所以 `label` 写错也可能导致"明明在名单里却报不在"。
+`people.names` 必须与名单里的名字完全一致（达标群名单在 `app/duzhan_ledger.py` 的 `OWNERS`，C转B 跟进群在 `app/ctob.py` 的 `OWNERS`，字段都叫 `display`）。另外名字是按 **群** 取的：先拿 `group.label` 去 `roster_by_group()` 找该群成员，找不到才退回全量名单 `roster_names()`。所以 `label` 写错也可能导致"明明在名单里却报不在"。
 
 **Q6. 报「策略 X 不在当前策略清单内」**
-策略 id 必须来自 `app/adapters/strategies.py` 的 `STRATEGIES`（示例是 `promo_a` / `promo_b`）。另一种情况：策略清单读取失败时 `service.strategy_ids()` 会返回空列表，于是**所有**策略块都会报这一条——这是"清单不可信就不许启用"的保守设计。
+策略 id 必须来自 `app/strategy_wa_brief.py` 的 `load_strategies()`，清单文件是 `app/wa_strategies.json`（示例 id 如 `sample-watch-x1`；`examples/03-ai-rule-missing-report.json` 里的 `promo_a` 是占位值，记得换）。另一种情况：策略清单读取失败时 `service.strategy_ids()` 会返回空列表，于是**所有**策略块都会报这一条——这是"清单不可信就不许启用"的保守设计。
 
 **Q7. 报「策略 X 已于 … 到期」**
 `until` 早于今天（Asia/Shanghai）就会命中；当天不算过期。改期或删掉这块。
@@ -187,10 +188,10 @@ uvicorn app.main:app --reload --port 8010
 后端开了 `--reload` 会自动重载；前端 Vite 会热更新。库里已有数据不受影响（改 schema 要重建库或写迁移）。浏览器缓存可以强刷一次。
 
 **Q10. 返回 401 未登录**
-有人打开了鉴权开关：`DUZHAN_REQUIRE_AUTH=1` 时必须带 `Authorization: Bearer <DUZHAN_ADMIN_TOKEN>`，且 token 不能为空。单机 demo 不设这两个变量就是默认放行。
+配置 API 的写操作要求 admin 角色（`router.py` 的 `require_admin = require_role("admin")`）：没有登录态回 401「未登录」，角色不够回 403「权限不足」。身份来源见 `app/auth/deps.py`（受信反代 Header / JWT Cookie 或 Bearer / 本机 CLI 兜底），模式由 `PDCA_AUTH_MODE` 决定（默认 `local`）。单测里是覆盖依赖，不是关鉴权。
 
 **Q11. 数据存在哪？怎么重置？**
-默认 `backend/duzhan.db`（SQLite，`app/db.py`）。停掉服务、删掉这个文件、重启即可回到空白库；也可用 `DUZHAN_DB` 指到别处。生产请用 `migrations/versions/001_duzhan_agents.py` 这份 alembic 版本文件建表。
+看 `PDCA_DATABASE_URL`（`app/config.py` 的 `_resolve_database_url()`，引擎在 `app/database.py`）：本地指到 `sqlite:///./data/duzhan.db` 时，停掉服务、删掉这个文件、重启即可回到空白库。生产请用 `pdca-workbench/migrations/versions/018_duzhan_agents.py` 这份 alembic 版本文件建表。
 
 **Q12. 中文在 Windows 控制台显示乱码**
 那是终端编码，不是数据问题（库与接口都是 UTF-8）。`chcp 65001` 或改 PowerShell 的输出编码即可；写文件时用 `-Encoding utf8NoBOM`，避免 BOM 让 JSON 解析失败。
@@ -200,7 +201,5 @@ uvicorn app.main:app --reload --port 8010
 ```powershell
 # 停掉 uvicorn / vite（Ctrl+C），然后：
 Remove-Item .\payload.json, .\toggle.json, .\preview.json, .\bad.json -ErrorAction SilentlyContinue
-Remove-Item .\backend\duzhan.db -ErrorAction SilentlyContinue   # 想留配置就别删
+Remove-Item .\pdca-workbench\data\duzhan.db -ErrorAction SilentlyContinue   # 想留配置就别删
 ```
-
-> ```

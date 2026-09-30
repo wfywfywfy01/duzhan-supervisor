@@ -14,7 +14,7 @@
     {
       "type": "people",
       "names": [
-        "示例跟进人1"
+        "跟进人01"
       ]
     },
     {
@@ -23,7 +23,7 @@
     },
     {
       "type": "source",
-      "key": "meeting_notes"
+      "key": "vemory"
     },
     {
       "type": "rule",
@@ -39,7 +39,7 @@
     },
     {
       "type": "strategy",
-      "id": "promo_a",
+      "id": "sample-watch-x1",
       "until": "2099-12-31"
     },
     {

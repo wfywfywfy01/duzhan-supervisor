@@ -1,0 +1,1 @@
+"""Team-scoped negotiation training."""

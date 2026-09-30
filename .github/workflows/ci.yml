@@ -6,12 +6,12 @@ on:
   pull_request:
 
 jobs:
-  backend:
-    name: 后端测试
+  duzhan:
+    name: 督战官后端测试
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: pdca-workbench
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,6 +24,7 @@ jobs:
       - name: 单元测试
         env:
           PYTHONPATH: .
+          PDCA_SCHEDULER_ENABLED: "0"
         run: python -m unittest discover -s tests -p "test_*.py" -v
       - name: 语法检查
         run: python -m compileall -q app tests

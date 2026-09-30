@@ -15,13 +15,13 @@
     {
       "type": "people",
       "names": [
-        "示例成员D",
-        "示例成员E"
+        "成员D",
+        "成员E"
       ]
     },
     {
       "type": "source",
-      "key": "msg_summary"
+      "key": "wa_summary"
     },
     {
       "type": "source",

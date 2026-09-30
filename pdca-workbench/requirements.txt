@@ -1,0 +1,20 @@
+# FastAPI 0.137+ changed router/middleware behavior used by this application.
+fastapi>=0.115.0,<0.137.0
+# Starlette 1.3 introduced the same lazy-router behavior; 1.2.1 is verified here.
+starlette>=1.2.1,<1.3.0
+uvicorn>=0.32.0
+sqlmodel>=0.0.22
+psycopg2-binary>=2.9.9
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.0,<5
+python-multipart>=0.0.12
+apscheduler>=3.10.4
+openpyxl>=3.1.5
+httpx>=0.27.0
+websockets>=15.0,<16
+mcp==1.28.1
+alembic>=1.14.0
+loguru>=0.7.2
+python-dotenv>=1.0.0
+playwright>=1.48.0

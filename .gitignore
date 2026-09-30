@@ -27,4 +27,5 @@ Thumbs.db
 # 密钥（永远不要提交）
 .env
 .env.*
+!.env.example
 *.pem

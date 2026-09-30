@@ -16,18 +16,18 @@
     {
       "type": "people",
       "names": [
-        "示例成员A",
-        "示例成员B",
-        "示例成员C"
+        "成员A",
+        "Sofia",
+        "成员C"
       ]
     },
     {
       "type": "source",
-      "key": "msg_summary"
+      "key": "wa_summary"
     },
     {
       "type": "source",
-      "key": "quote_ocr"
+      "key": "mto_ocr"
     },
     {
       "type": "source",

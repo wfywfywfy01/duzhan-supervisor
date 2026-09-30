@@ -7,21 +7,21 @@
 ```
 ① 配置页（browser, frontend/）
    积木面板 → 有序积木数组 → JSON 文本（双向可改）
-        │  fetch /api/duzhan-agents/*（vite 代理到 127.0.0.1:8000）
-② API 层（FastAPI, backend/app/duzhan_admin/router.py）
+        │  fetch /api/duzhan-agents/*（vite 代理到 127.0.0.1:8767）
+② API 层（FastAPI, pdca-workbench/app/duzhan_admin/router.py）
    pydantic 入参 → 权限依赖 require_admin → 调服务层 → 统一响应体
         │
-③ 服务层（backend/app/duzhan_admin/service.py）—— 纯逻辑，不取数不推送
+③ 服务层（pdca-workbench/app/duzhan_admin/service.py）—— 纯逻辑，不取数不推送
    blocks_of / validate_agent / resolve_spec / preview_agent / seed_from_code
         │                                    ▲
-④ 积木 schema（backend/app/duzhan_blocks.py）—— 唯一事实来源
+④ 积木 schema（pdca-workbench/app/duzhan_blocks.py）—— 唯一事实来源
    BLOCK_TYPES / 枚举 / parse_blocks / dump_blocks / validate_blocks / block_schema
         │
-⑤ 存储（SQLModel + SQLite，backend/app/db.py + app/models/duzhan_agent.py）
+⑤ 存储（SQLModel + SQLite，pdca-workbench/app/database.py + pdca-workbench/app/models/duzhan_agent.py）
    duzhan_agents(id, name, enabled, timezone, blocks_json, note, created_at, updated_at)
         │  enabled = true 才注册
 ⑥ 运行时（不在本仓库）
-   调度（timezone + slots）→ 取数（数据源适配器）→ 渲染（复用 group_brief / follow_brief 渲染器）
+   调度（timezone + slots）→ 取数（数据源适配器）→ 渲染（复用 `app/duzhan.py` / `app/ctob.py` 的 `render_brief` 渲染器）
    → 推送（群 + recipient）→ 写 run 台账（按子 Agent 分档）
 ```
 
@@ -62,7 +62,7 @@
 具体做法：
 
 - `resolve_spec(agent)` 是**唯一的翻译层**：把积木数组翻译成一个纯字典（`groups` / `slots` / `people` / `sources` / `rules` / `conditions` / `recipients` / `strategies` / `lang` / `title` / `footer` / `renderer`）。它是纯函数，不读网络、不读库、不取数，可以随便单测。
-- `renderer_for(blocks)` 只做一件事：如果 `group.channel_id` 落在跟进群集合里 → `follow_brief.renderer`，否则 → `group_brief.renderer`。也就是说 **"发什么"由配置决定，"怎么渲染"仍然是原有的那两套渲染器**。
+- `renderer_for(blocks)` 只做一件事：如果 `group.channel_id` 落在跟进群集合里 → `ctob.render_brief`，否则 → `duzhan.render_brief`。也就是说 **"发什么"由配置决定，"怎么渲染"仍然是原有的那两套渲染器**。
 - 渲染器拿到的输入，就是 `resolve_spec()` 的输出——运行时要做的只有：按 `sources` 取数、把数据 + spec 一起交给渲染器、按 `groups` 与 `recipients` 推送。
 
 ## 5. code / db 双源与灰度
@@ -71,12 +71,12 @@
 
 | 源 | 在哪 | 谁在读 |
 | --- | --- | --- |
-| 代码常量 | `app/adapters/groups.py` 的 `GROUPS` / `CTOB_GROUPS` | 现有硬编码路径（生产）+ `seed_from_code()` |
+| 代码常量 | `app/duzhan.py` 的 `GROUPS` / `app/ctob.py` 的 `OWNERS` | 现有硬编码路径（生产）+ `seed_from_code()` |
 | 库配置 | `duzhan_agents` 表 | 配置页 + 运行时（按 `enabled` 注册） |
 
 `seed_from_code()` 的设计就是为了让这两个源能对上：
 
-- 导入内容与硬编码同源：群名 / `channel_id` / 语言 / 时区直接取 `GROUPS`、`CTOB_GROUPS`；档位取 `DEFAULT_SLOTS⟧（`10:00/15:00/20:00⟧）；取数节取 `DUZHAN_SEED_SOURCES⟧（达标群）与 `CTOB_SEED_SOURCES⟧（跟进群）。
+- 导入内容与硬编码同源：群名 / `channel_id` / 语言 / 时区直接取 `GROUPS`、`CTOB_GROUPS`；档位取 `PDCA_DUZHAN_TIMES`（默认 `10:00/15:00/20:00`）；取数节取 `DUZHAN_SEED_SOURCES`（达标群）与 `CTOB_SEED_SOURCES`（跟进群）。
 - **一律默认停用**（`enabled=False`，注释原文"避免导入即双跑"），同名配置**跳过不覆盖**（响应里回 `skipped` 列表），导入完还会把每条配置的 `errors[]` 一起返回。
 - 导入的备注固定写 `从代码导入（默认停用，核对后再启用）`，方便在列表里一眼认出来。
 
@@ -124,8 +124,8 @@
 | 对齐项 | 怎么对 | 本仓库对应的东西 |
 | --- | --- | --- |
 | 数据源 | 配置里的 `sources` 与硬编码那一节取的数一一对应 | `SOURCE_KEYS`、`DUZHAN_SEED_SOURCES` / `CTOB_SEED_SOURCES` |
-| 渲染器 | 试跑输出的 `渲染器：…` 与硬编码走的那支一致 | `renderer_for()` → `group_brief.renderer` / `follow_brief.renderer` |
-| 档位与时区 | `spec.slots` 与 `spec.timezone` 与原配置一致 | `DEFAULT_SLOTS`、子 Agent 的 `timezone` |
+| 渲染器 | 试跑输出的 `渲染器：…` 与硬编码走的那支一致 | `renderer_for()` → `duzhan.render_brief` / `ctob.render_brief` |
+| 档位与时区 | `spec.slots` 与 `spec.timezone` 与原配置一致 | `PDCA_DUZHAN_TIMES`（默认 `10:00/15:00/20:00`）、子 Agent 的 `timezone` |
 | 名单 | `spec.people` 与原来 @ 的人一致（不限定就是全群） | `owners_for()`、`roster_by_group()` / `roster_names()` |
 | 文本 | 取同一时刻的同一份数据，两份报告做 diff（含换行） | 渲染器输出（运行时）；本仓库只保证输入结构一致 |
 
@@ -150,7 +150,7 @@
 
 **维护约定**
 
-- 加/改积木：改 `duzhan_blocks.py`（枚举 → 校验 → 面板）→ 改 `service.resolve_spec()`（翻译）→ 补 `backend/tests` 正反例 → 改 `docs/block-schema.md` 与 `examples/`。步骤见 `docs/block-schema.md` 第 14 节。
+- 加/改积木：改 `duzhan_blocks.py`（枚举 → 校验 → 面板）→ 改 `service.resolve_spec()`（翻译）→ 补 `pdca-workbench/tests` 正反例 → 改 `docs/block-schema.md` 与 `examples/`。步骤见 `docs/block-schema.md` 第 14 节。
 - 闸门只有一道、但必须守住：**保存永远允许（草稿）**，**启用永远要过校验**。不要为了"先跑起来"绕过 `_guard_enable()`。
 - 配置是数据，不是代码：改配置不需要发版；但也别把业务逻辑塞进 `rule.text` 之外的字段里（那些字段运行时并不解释）。
 
